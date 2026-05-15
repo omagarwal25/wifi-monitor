@@ -3,6 +3,7 @@ import {
   ComposedChart,
   Line,
   ReferenceArea,
+  ReferenceLine,
   AreaChart,
   Area,
   XAxis,
@@ -247,6 +248,12 @@ export default function Dashboard() {
                       strokeOpacity={0}
                     />
                   ))}
+                  <ReferenceLine
+                    y={50}
+                    stroke="#444"
+                    strokeDasharray="4 4"
+                    label={{ value: "50ms", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="routerLatencyMs"
@@ -300,6 +307,12 @@ export default function Dashboard() {
                     formatter={(v) => (v === "routerPacketLoss" ? "Router" : "External")}
                     wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }}
                   />
+                  <ReferenceLine
+                    y={1}
+                    stroke="#444"
+                    strokeDasharray="4 4"
+                    label={{ value: "1%", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
+                  />
                   <Area
                     type="monotone"
                     dataKey="routerPacketLoss"
@@ -351,6 +364,18 @@ export default function Dashboard() {
                   <Legend
                     formatter={(v) => (v === "downloadMbps" ? "Download" : "Upload")}
                     wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }}
+                  />
+                  <ReferenceLine
+                    y={200}
+                    stroke="#444"
+                    strokeDasharray="4 4"
+                    label={{ value: "200", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
+                  />
+                  <ReferenceLine
+                    y={150}
+                    stroke="#444"
+                    strokeDasharray="4 4"
+                    label={{ value: "150", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
                   />
                   <Area
                     type="monotone"
