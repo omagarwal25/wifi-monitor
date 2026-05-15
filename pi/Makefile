@@ -1,4 +1,4 @@
-.PHONY: install cron update logs errors status clean
+.PHONY: install cron update logs errors status speedtest clean
 
 install:
 	sudo apt update && sudo apt install -y python3-pip git sqlite3
@@ -28,6 +28,9 @@ status:
 		"SELECT measured_at, router_reachable, external_reachable, router_latency_ms, external_latency_ms FROM metrics ORDER BY id DESC LIMIT 5;"
 	@echo "=== Unpushed rows ===" && sqlite3 metrics.db \
 		"SELECT COUNT(*) FROM metrics WHERE pushed = 0;"
+
+speedtest:
+	FORCE_SPEEDTEST=1 /usr/bin/python3 $(PWD)/monitor.py
 
 clean:
 	rm -f metrics.db cron.log errors.log

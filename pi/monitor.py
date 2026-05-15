@@ -198,10 +198,10 @@ def main() -> None:
     router = ping(ROUTER_IP)
     external = ping(EXTERNAL_IP)
 
-    # Run speed test on the hour (minute == 0)
+    # Run speed test on the hour (minute == 0) or when forced
     speed = {}
-    if datetime.now(timezone.utc).minute == 0:
-        log.info("top of hour — running speed test")
+    if datetime.now(timezone.utc).minute == 0 or os.environ.get("FORCE_SPEEDTEST"):
+        log.info("running speed test%s", " (forced)" if os.environ.get("FORCE_SPEEDTEST") else "")
         speed = run_speedtest()
 
     metric = {
