@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Metric {
+  id                 Int      @id @default(autoincrement())
+  measuredAt         DateTime
+  createdAt          DateTime @default(now())
+  routerLatencyMs    Float?
+  externalLatencyMs  Float?
+  routerPacketLoss   Float
+  externalPacketLoss Float
+  routerReachable    Boolean
+  externalReachable  Boolean
+
+  @@index([measuredAt])
+}
