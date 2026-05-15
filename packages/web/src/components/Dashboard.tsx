@@ -210,7 +210,7 @@ export default function Dashboard() {
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                   <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
-                  <YAxis domain={[0, 100]} unit="%" width={40} {...AXIS} />
+                  <YAxis domain={[0, (max: number) => max < 2 ? 5 : Math.ceil(max * 1.4)]} unit="%" width={40} {...AXIS} />
                   <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
                     formatter={(v, name) => [`${(v as number).toFixed(1)}%`, name === "routerPacketLoss" ? "Router" : "External"]} />
                   <Legend formatter={(v) => v === "routerPacketLoss" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
@@ -231,7 +231,7 @@ export default function Dashboard() {
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                   <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
-                  <YAxis unit=" Mbps" width={64} domain={[0, (m: number) => Math.max(m * 1.2, 220)]} {...AXIS} />
+                  <YAxis width={44} domain={[0, (m: number) => Math.max(m * 1.2, 220)]} {...AXIS} />
                   <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
                     formatter={(v, name) => [v != null ? `${(v as number).toFixed(1)} Mbps` : "—", name === "downloadMbps" ? "Download" : "Upload"]} />
                   <Legend formatter={(v) => v === "downloadMbps" ? "Download" : "Upload"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
