@@ -193,8 +193,8 @@ export default function Dashboard() {
                     formatter={(v, name) => [v != null ? `${(v as number).toFixed(1)} ms` : "—", name === "routerLatencyMs" ? "Router" : "External"]} />
                   <Legend formatter={(v) => v === "routerLatencyMs" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
                   {allDropouts.map((r, i) => <ReferenceArea key={i} x1={r.x1} x2={r.x2} fill={r.fill} strokeOpacity={0} />)}
-                  <ReferenceLine y={50} stroke="#4a4a4a" strokeDasharray="4 4"
-                    label={{ value: "50ms", fill: "#666", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
+                  <ReferenceLine y={50} stroke="#555" strokeDasharray="4 4"
+                    label={{ value: "50ms", fill: "#999", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
                   <Line type="monotone" dataKey="routerLatencyMs"    stroke="#f5a623" dot={false} strokeWidth={1.5} connectNulls={false} />
                   <Line type="monotone" dataKey="externalLatencyMs"  stroke="#666"    dot={false} strokeWidth={1.5} connectNulls={false} />
                 </ComposedChart>
@@ -214,8 +214,8 @@ export default function Dashboard() {
                   <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
                     formatter={(v, name) => [`${(v as number).toFixed(1)}%`, name === "routerPacketLoss" ? "Router" : "External"]} />
                   <Legend formatter={(v) => v === "routerPacketLoss" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
-                  <ReferenceLine y={1} stroke="#4a4a4a" strokeDasharray="4 4"
-                    label={{ value: "1%", fill: "#666", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
+                  <ReferenceLine y={1} stroke="#555" strokeDasharray="4 4"
+                    label={{ value: "1%", fill: "#999", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
                   <Area type="monotone" dataKey="routerPacketLoss"   stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} />
                   <Area type="monotone" dataKey="externalPacketLoss" stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} />
                 </AreaChart>
@@ -237,8 +237,8 @@ export default function Dashboard() {
                   <Legend formatter={(v) => v === "downloadMbps" ? "Download" : "Upload"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
                   {/* acceptable band 150–200 Mbps */}
                   <ReferenceArea y1={150} y2={200} fill="rgba(76,175,80,0.08)" strokeOpacity={0} />
-                  <ReferenceLine y={150} stroke="#3a6b3a" strokeDasharray="3 3" />
-                  <ReferenceLine y={200} stroke="#3a6b3a" strokeDasharray="3 3" />
+                  <ReferenceLine y={150} stroke="#4a8c4a" strokeDasharray="3 3" />
+                  <ReferenceLine y={200} stroke="#4a8c4a" strokeDasharray="3 3" />
                   <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} connectNulls={false} />
                   <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} connectNulls={false} />
                 </AreaChart>
