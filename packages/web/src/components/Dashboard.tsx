@@ -225,8 +225,8 @@ export default function Dashboard() {
                   <Tooltip
                     contentStyle={tooltipStyle}
                     labelFormatter={(v) => formatTime(v as string)}
-                    formatter={(v: number | null, name: string) => [
-                      v !== null ? `${v.toFixed(1)} ms` : "—",
+                    formatter={(v, name) => [
+                      v != null ? `${(v as number).toFixed(1)} ms` : "—",
                       name === "routerLatencyMs" ? "Router" : "External",
                     ]}
                   />
@@ -287,8 +287,8 @@ export default function Dashboard() {
                   <Tooltip
                     contentStyle={tooltipStyle}
                     labelFormatter={(v) => formatTime(v as string)}
-                    formatter={(v: number, name: string) => [
-                      `${v.toFixed(1)}%`,
+                    formatter={(v, name) => [
+                      `${(v as number).toFixed(1)}%`,
                       name === "routerPacketLoss" ? "Router" : "External",
                     ]}
                   />
