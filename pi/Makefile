@@ -2,7 +2,7 @@
 
 install:
 	sudo apt update && sudo apt install -y python3-pip git sqlite3
-	pip3 install requests python-dotenv
+	pip3 install requests python-dotenv --break-system-packages
 	cp -n .env.example .env
 	@echo "-----"
 	@echo "Edit .env with your API_URL and API_KEY, then run: make cron"
@@ -14,7 +14,7 @@ cron:
 
 update:
 	git pull
-	pip3 install -r requirements.txt
+	pip3 install -r requirements.txt --break-system-packages
 
 logs:
 	tail -f cron.log
