@@ -226,6 +226,7 @@ export default function Dashboard() {
                     tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
                     unit=" ms"
                     width={52}
+                    domain={[0, (dataMax: number) => Math.max(dataMax * 1.2, 60)]}
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
@@ -352,6 +353,7 @@ export default function Dashboard() {
                     tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
                     unit=" Mbps"
                     width={60}
+                    domain={[0, (dataMax: number) => Math.max(dataMax * 1.2, 220)]}
                   />
                   <Tooltip
                     contentStyle={tooltipStyle}
