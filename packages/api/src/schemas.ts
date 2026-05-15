@@ -8,6 +8,8 @@ export const MetricSchema = z.object({
   routerReachable: z.boolean(),
   externalReachable: z.boolean(),
   measuredAt: z.string().datetime(),
+  downloadMbps: z.number().positive().nullable().optional(),
+  uploadMbps: z.number().positive().nullable().optional(),
 });
 
 export type Metric = z.infer<typeof MetricSchema>;

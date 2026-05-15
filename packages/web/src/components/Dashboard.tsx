@@ -23,6 +23,8 @@ interface Metric {
   externalPacketLoss: number;
   routerReachable: boolean;
   externalReachable: boolean;
+  downloadMbps: number | null;
+  uploadMbps: number | null;
 }
 
 const TIME_RANGES = [
@@ -155,6 +157,8 @@ export default function Dashboard() {
     externalLatencyMs: m.externalLatencyMs,
     routerPacketLoss: m.routerPacketLoss,
     externalPacketLoss: m.externalPacketLoss,
+    downloadMbps: m.downloadMbps,
+    uploadMbps: m.uploadMbps,
   }));
 
   return (
@@ -311,6 +315,60 @@ export default function Dashboard() {
                     fill="rgba(136,136,136,0.1)"
                     strokeWidth={1.5}
                     dot={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Speed (Mbps) — hourly</h2>
+            <div style={styles.chartWrap}>
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+                  <XAxis
+                    dataKey="time"
+                    tickFormatter={formatTime}
+                    stroke="#444"
+                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
+                    minTickGap={40}
+                  />
+                  <YAxis
+                    stroke="#444"
+                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
+                    unit=" Mbps"
+                    width={60}
+                  />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    labelFormatter={(v) => formatTime(v as string)}
+                    formatter={(v, name) => [
+                      v != null ? `${(v as number).toFixed(1)} Mbps` : "—",
+                      name === "downloadMbps" ? "Download" : "Upload",
+                    ]}
+                  />
+                  <Legend
+                    formatter={(v) => (v === "downloadMbps" ? "Download" : "Upload")}
+                    wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="downloadMbps"
+                    stroke="#f5a623"
+                    fill="rgba(245,166,35,0.15)"
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="uploadMbps"
+                    stroke="#888"
+                    fill="rgba(136,136,136,0.1)"
+                    strokeWidth={1.5}
+                    dot={false}
+                    connectNulls={false}
                   />
                 </AreaChart>
               </ResponsiveContainer>

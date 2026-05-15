@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+import speedtest as speedtest_lib
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).parent
@@ -57,6 +58,8 @@ def get_db() -> sqlite3.Connection:
             external_packet_loss REAL NOT NULL,
             router_reachable INTEGER NOT NULL,
             external_reachable INTEGER NOT NULL,
+            download_mbps REAL,
+            upload_mbps REAL,
             pushed INTEGER NOT NULL DEFAULT 0
         )
     """)
@@ -70,8 +73,9 @@ def insert_metric(conn: sqlite3.Connection, measured_at: str, data: dict) -> Non
         INSERT INTO metrics (
             measured_at, router_latency_ms, external_latency_ms,
             router_packet_loss, external_packet_loss,
-            router_reachable, external_reachable
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            router_reachable, external_reachable,
+            download_mbps, upload_mbps
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             measured_at,
@@ -81,6 +85,8 @@ def insert_metric(conn: sqlite3.Connection, measured_at: str, data: dict) -> Non
             data["externalPacketLoss"],
             int(data["routerReachable"]),
             int(data["externalReachable"]),
+            data.get("downloadMbps"),
+            data.get("uploadMbps"),
         ),
     )
     conn.commit()
@@ -134,6 +140,24 @@ def ping(host: str, count: int = PING_COUNT) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Speed test
+# ---------------------------------------------------------------------------
+
+def run_speedtest() -> dict:
+    """Return download/upload in Mbps, or None on failure."""
+    try:
+        st = speedtest_lib.Speedtest(secure=True)
+        st.get_best_server()
+        download = st.download() / 1_000_000
+        upload = st.upload() / 1_000_000
+        log.info("speedtest: %.1f Mbps down / %.1f Mbps up", download, upload)
+        return {"downloadMbps": round(download, 2), "uploadMbps": round(upload, 2)}
+    except Exception as exc:
+        log.warning("speedtest failed: %s", exc)
+        return {"downloadMbps": None, "uploadMbps": None}
+
+
+# ---------------------------------------------------------------------------
 # API flush
 # ---------------------------------------------------------------------------
 
@@ -146,6 +170,8 @@ def push_row(row: sqlite3.Row) -> bool:
         "externalPacketLoss": row["external_packet_loss"],
         "routerReachable": bool(row["router_reachable"]),
         "externalReachable": bool(row["external_reachable"]),
+        "downloadMbps": row["download_mbps"],
+        "uploadMbps": row["upload_mbps"],
     }
     try:
         resp = requests.post(
@@ -172,6 +198,12 @@ def main() -> None:
     router = ping(ROUTER_IP)
     external = ping(EXTERNAL_IP)
 
+    # Run speed test on the hour (minute == 0)
+    speed = {}
+    if datetime.now(timezone.utc).minute == 0:
+        log.info("top of hour — running speed test")
+        speed = run_speedtest()
+
     metric = {
         "routerLatencyMs": router["latencyMs"],
         "externalLatencyMs": external["latencyMs"],
@@ -179,6 +211,7 @@ def main() -> None:
         "externalPacketLoss": external["packetLoss"],
         "routerReachable": router["reachable"],
         "externalReachable": external["reachable"],
+        **speed,
     }
 
     log.info("collected: %s", json.dumps(metric))

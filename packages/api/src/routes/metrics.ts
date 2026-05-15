@@ -40,6 +40,8 @@ metricsRouter.post("/", async (c) => {
       externalPacketLoss: data.externalPacketLoss,
       routerReachable: data.routerReachable,
       externalReachable: data.externalReachable,
+      downloadMbps: data.downloadMbps ?? null,
+      uploadMbps: data.uploadMbps ?? null,
     },
   });
 
@@ -63,6 +65,8 @@ metricsRouter.get("/", async (c) => {
       externalPacketLoss: true,
       routerReachable: true,
       externalReachable: true,
+      downloadMbps: true,
+      uploadMbps: true,
     },
   });
 

@@ -17,6 +17,8 @@ model Metric {
   externalPacketLoss Float
   routerReachable    Boolean
   externalReachable  Boolean
+  downloadMbps       Float?
+  uploadMbps         Float?
 
   @@index([measuredAt])
 }
