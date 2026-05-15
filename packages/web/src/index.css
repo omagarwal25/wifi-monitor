@@ -1,33 +1,35 @@
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import "tailwindcss";
+
+@theme {
+  --color-bg:      #0d0d0d;
+  --color-surface: #141414;
+  --color-edge:    #2a2a2a;
+  --color-accent:  #f5a623;
+  --color-muted:   #666666;
+  --color-danger:  #e84040;
+  --color-ok:      #4caf50;
+  --color-warn:    #f5c842;
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
 }
 
+/* keep CSS vars for recharts inline styles */
 :root {
-  --bg: #0d0d0d;
-  --surface: #141414;
-  --border: #2a2a2a;
-  --amber: #f5a623;
-  --white: #e8e8e8;
-  --dim: #666666;
-  --red: #e84040;
-  --green: #4caf50;
+  --amber:  #f5a623;
+  --red:    #e84040;
+  --green:  #4caf50;
   --yellow: #f5c842;
-  --mono: "JetBrains Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+  --dim:    #666666;
 }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  background: var(--bg);
-  color: var(--white);
-  font-family: var(--mono);
+  background: theme(--color-bg);
+  color: #e8e8e8;
+  font-family: theme(--font-mono);
   font-size: 13px;
   line-height: 1.5;
   min-height: 100vh;
 }
 
-h1, h2, h3 {
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
+h1, h2, h3 { font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }

@@ -37,77 +37,55 @@ const TIME_RANGES = [
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const AXIS = { stroke: "#444", tick: { fill: "#555", fontSize: 11, fontFamily: "monospace" } };
+const TOOLTIP: React.CSSProperties = {
+  background: "#1a1a1a",
+  border: "1px solid #2a2a2a",
+  borderRadius: 0,
+  fontFamily: "monospace",
+  fontSize: 12,
+  color: "#e8e8e8",
+};
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-function computeDropoutRegions(
-  metrics: Metric[],
-  field: "routerReachable" | "externalReachable"
-): { x1: string; x2: string }[] {
+function computeDropoutRegions(metrics: Metric[], field: "routerReachable" | "externalReachable") {
   const regions: { x1: string; x2: string }[] = [];
   let start: string | null = null;
-
   for (let i = 0; i < metrics.length; i++) {
-    const m = metrics[i];
-    const down = !m[field];
-    if (down && start === null) {
-      start = m.measuredAt;
-    } else if (!down && start !== null) {
+    const down = !metrics[i][field];
+    if (down && start === null) start = metrics[i].measuredAt;
+    else if (!down && start !== null) {
       regions.push({ x1: start, x2: metrics[i - 1].measuredAt });
       start = null;
     }
   }
-  if (start !== null && metrics.length > 0) {
+  if (start !== null && metrics.length > 0)
     regions.push({ x1: start, x2: metrics[metrics.length - 1].measuredAt });
-  }
   return regions;
 }
 
 function computeStats(metrics: Metric[]) {
-  if (metrics.length === 0) {
-    return { uptime: null, avgRouter: null, avgExternal: null, dropouts: 0 };
-  }
-
-  const reachableCount = metrics.filter((m) => m.externalReachable).length;
-  const uptime = (reachableCount / metrics.length) * 100;
-
-  const routerLatencies = metrics
-    .map((m) => m.routerLatencyMs)
-    .filter((v): v is number => v !== null);
-  const externalLatencies = metrics
-    .map((m) => m.externalLatencyMs)
-    .filter((v): v is number => v !== null);
-
-  const avgRouter =
-    routerLatencies.length > 0
-      ? routerLatencies.reduce((a, b) => a + b, 0) / routerLatencies.length
-      : null;
-  const avgExternal =
-    externalLatencies.length > 0
-      ? externalLatencies.reduce((a, b) => a + b, 0) / externalLatencies.length
-      : null;
-
-  let dropouts = 0;
-  let wasDown = false;
+  if (!metrics.length) return { uptime: null, avgRouter: null, avgExternal: null, dropouts: 0 };
+  const uptime = (metrics.filter((m) => m.externalReachable).length / metrics.length) * 100;
+  const routerLats = metrics.map((m) => m.routerLatencyMs).filter((v): v is number => v !== null);
+  const extLats = metrics.map((m) => m.externalLatencyMs).filter((v): v is number => v !== null);
+  const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  let dropouts = 0, wasDown = false;
   for (const m of metrics) {
-    if (!m.externalReachable && !wasDown) {
-      dropouts++;
-      wasDown = true;
-    } else if (m.externalReachable) {
-      wasDown = false;
-    }
+    if (!m.externalReachable && !wasDown) { dropouts++; wasDown = true; }
+    else if (m.externalReachable) wasDown = false;
   }
-
-  return { uptime, avgRouter, avgExternal, dropouts };
+  return { uptime, avgRouter: avg(routerLats), avgExternal: avg(extLats), dropouts };
 }
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [rangeIdx, setRangeIdx] = useState(2); // default 12h
+  const [rangeIdx, setRangeIdx] = useState(2);
 
   const limit = TIME_RANGES[rangeIdx].limit;
 
@@ -115,8 +93,7 @@ export default function Dashboard() {
     try {
       const res = await fetch(`${API_URL}/metrics?limit=${limit}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: Metric[] = await res.json();
-      setMetrics(data);
+      setMetrics(await res.json());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fetch failed");
@@ -127,29 +104,25 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 60_000);
-    return () => clearInterval(interval);
+    const id = setInterval(fetchMetrics, 60_000);
+    return () => clearInterval(id);
   }, [fetchMetrics]);
 
   const latest = metrics[metrics.length - 1] ?? null;
 
   function getStatus() {
     if (!latest) return null;
-    if (!latest.routerReachable)
-      return { label: "Router / WiFi issue", color: "var(--red)", dot: "🔴" };
-    if (!latest.externalReachable)
-      return { label: "ISP issue", color: "var(--yellow)", dot: "🟡" };
+    if (!latest.routerReachable) return { label: "Router / WiFi issue", color: "var(--red)",    dot: "🔴" };
+    if (!latest.externalReachable) return { label: "ISP issue",          color: "var(--yellow)", dot: "🟡" };
     return { label: "All good", color: "var(--green)", dot: "🟢" };
   }
 
   const status = getStatus();
   const stats = computeStats(metrics);
 
-  const routerDropouts = computeDropoutRegions(metrics, "routerReachable");
-  const externalDropouts = computeDropoutRegions(metrics, "externalReachable");
   const allDropouts = [
-    ...routerDropouts.map((r) => ({ ...r, color: "rgba(232,64,64,0.15)" })),
-    ...externalDropouts.map((r) => ({ ...r, color: "rgba(245,200,66,0.1)" })),
+    ...computeDropoutRegions(metrics, "routerReachable").map((r) => ({ ...r, fill: "rgba(232,64,64,0.15)" })),
+    ...computeDropoutRegions(metrics, "externalReachable").map((r) => ({ ...r, fill: "rgba(245,200,66,0.1)" })),
   ];
 
   const chartData = metrics.map((m) => ({
@@ -163,18 +136,22 @@ export default function Dashboard() {
   }));
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>WiFi Monitor</h1>
-        <div style={styles.rangeBar}>
+    <div className="max-w-[1100px] mx-auto px-5 py-6">
+
+      {/* Header */}
+      <header className="flex items-center justify-between pb-3 mb-4 border-b border-edge">
+        <h1 className="text-accent text-base tracking-widest">WiFi Monitor</h1>
+        <div className="flex gap-1">
           {TIME_RANGES.map((r, i) => (
             <button
               key={r.label}
               onClick={() => setRangeIdx(i)}
-              style={{
-                ...styles.rangeBtn,
-                ...(i === rangeIdx ? styles.rangeBtnActive : {}),
-              }}
+              className={[
+                "border px-2.5 py-1 text-xs tracking-wide cursor-pointer bg-transparent transition-colors",
+                i === rangeIdx
+                  ? "border-accent text-accent"
+                  : "border-edge text-muted hover:border-muted",
+              ].join(" ")}
             >
               {r.label}
             </button>
@@ -182,244 +159,99 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {/* Status banner */}
       {status && (
         <div
-          style={{
-            ...styles.statusBanner,
-            borderColor: status.color,
-            color: status.color,
-          }}
+          className="border px-4 py-2.5 mb-5 text-sm tracking-wide"
+          style={{ borderColor: status.color, color: status.color }}
         >
           {status.dot} {status.label}
           {latest && (
-            <span style={styles.statusTime}>
-              &nbsp;— last update {formatTime(latest.measuredAt)}
+            <span className="text-muted text-xs ml-1">
+              — last update {formatTime(latest.measuredAt)}
             </span>
           )}
         </div>
       )}
 
-      {loading && <p style={styles.info}>Loading…</p>}
-      {error && <p style={{ ...styles.info, color: "var(--red)" }}>Error: {error}</p>}
-
-      {!loading && metrics.length === 0 && !error && (
-        <p style={styles.info}>No data yet.</p>
-      )}
+      {loading && <p className="text-muted py-5">Loading…</p>}
+      {error   && <p className="text-danger py-5">Error: {error}</p>}
+      {!loading && !error && metrics.length === 0 && <p className="text-muted py-5">No data yet.</p>}
 
       {metrics.length > 0 && (
         <>
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Latency (ms)</h2>
-            <div style={styles.chartWrap}>
+          {/* Latency */}
+          <section className="mb-6">
+            <h2 className="text-[10px] text-muted mb-2 tracking-widest">Latency (ms)</h2>
+            <div className="border border-edge p-3 pr-1 pb-1">
               <ResponsiveContainer width="100%" height={220}>
                 <ComposedChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                  <XAxis
-                    dataKey="time"
-                    tickFormatter={formatTime}
-                    stroke="#444"
-                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
-                    minTickGap={40}
-                  />
-                  <YAxis
-                    stroke="#444"
-                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
-                    unit=" ms"
-                    width={52}
-                    domain={[0, (dataMax: number) => Math.max(dataMax * 1.2, 60)]}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    labelFormatter={(v) => formatTime(v as string)}
-                    formatter={(v, name) => [
-                      v != null ? `${(v as number).toFixed(1)} ms` : "—",
-                      name === "routerLatencyMs" ? "Router" : "External",
-                    ]}
-                  />
-                  <Legend
-                    formatter={(v) => (v === "routerLatencyMs" ? "Router" : "External")}
-                    wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }}
-                  />
-                  {allDropouts.map((r, i) => (
-                    <ReferenceArea
-                      key={i}
-                      x1={r.x1}
-                      x2={r.x2}
-                      fill={r.color}
-                      strokeOpacity={0}
-                    />
-                  ))}
-                  <ReferenceLine
-                    y={50}
-                    stroke="#444"
-                    strokeDasharray="4 4"
-                    label={{ value: "50ms", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="routerLatencyMs"
-                    stroke="#f5a623"
-                    dot={false}
-                    strokeWidth={1.5}
-                    connectNulls={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="externalLatencyMs"
-                    stroke="#888"
-                    dot={false}
-                    strokeWidth={1.5}
-                    connectNulls={false}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
+                  <YAxis unit=" ms" width={52} domain={[0, (m: number) => Math.max(m * 1.2, 60)]} {...AXIS} />
+                  <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
+                    formatter={(v, name) => [v != null ? `${(v as number).toFixed(1)} ms` : "—", name === "routerLatencyMs" ? "Router" : "External"]} />
+                  <Legend formatter={(v) => v === "routerLatencyMs" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
+                  {allDropouts.map((r, i) => <ReferenceArea key={i} x1={r.x1} x2={r.x2} fill={r.fill} strokeOpacity={0} />)}
+                  <ReferenceLine y={50} stroke="#333" strokeDasharray="4 4"
+                    label={{ value: "50ms", fill: "#444", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
+                  <Line type="monotone" dataKey="routerLatencyMs"    stroke="#f5a623" dot={false} strokeWidth={1.5} connectNulls={false} />
+                  <Line type="monotone" dataKey="externalLatencyMs"  stroke="#666"    dot={false} strokeWidth={1.5} connectNulls={false} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
           </section>
 
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Packet Loss (%)</h2>
-            <div style={styles.chartWrap}>
+          {/* Packet loss */}
+          <section className="mb-6">
+            <h2 className="text-[10px] text-muted mb-2 tracking-widest">Packet Loss (%)</h2>
+            <div className="border border-edge p-3 pr-1 pb-1">
               <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                  <XAxis
-                    dataKey="time"
-                    tickFormatter={formatTime}
-                    stroke="#444"
-                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
-                    minTickGap={40}
-                  />
-                  <YAxis
-                    stroke="#444"
-                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
-                    domain={[0, 100]}
-                    unit="%"
-                    width={40}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    labelFormatter={(v) => formatTime(v as string)}
-                    formatter={(v, name) => [
-                      `${(v as number).toFixed(1)}%`,
-                      name === "routerPacketLoss" ? "Router" : "External",
-                    ]}
-                  />
-                  <Legend
-                    formatter={(v) => (v === "routerPacketLoss" ? "Router" : "External")}
-                    wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }}
-                  />
-                  <ReferenceLine
-                    y={1}
-                    stroke="#444"
-                    strokeDasharray="4 4"
-                    label={{ value: "1%", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="routerPacketLoss"
-                    stroke="#f5a623"
-                    fill="rgba(245,166,35,0.15)"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="externalPacketLoss"
-                    stroke="#888"
-                    fill="rgba(136,136,136,0.1)"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
+                  <YAxis domain={[0, 100]} unit="%" width={40} {...AXIS} />
+                  <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
+                    formatter={(v, name) => [`${(v as number).toFixed(1)}%`, name === "routerPacketLoss" ? "Router" : "External"]} />
+                  <Legend formatter={(v) => v === "routerPacketLoss" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
+                  <ReferenceLine y={1} stroke="#333" strokeDasharray="4 4"
+                    label={{ value: "1%", fill: "#444", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
+                  <Area type="monotone" dataKey="routerPacketLoss"   stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} />
+                  <Area type="monotone" dataKey="externalPacketLoss" stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </section>
 
-          <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Speed (Mbps) — hourly</h2>
-            <div style={styles.chartWrap}>
+          {/* Speed */}
+          <section className="mb-6">
+            <h2 className="text-[10px] text-muted mb-2 tracking-widest">Speed (Mbps) — hourly</h2>
+            <div className="border border-edge p-3 pr-1 pb-1">
               <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#222" />
-                  <XAxis
-                    dataKey="time"
-                    tickFormatter={formatTime}
-                    stroke="#444"
-                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
-                    minTickGap={40}
-                  />
-                  <YAxis
-                    stroke="#444"
-                    tick={{ fill: "#666", fontSize: 11, fontFamily: "monospace" }}
-                    unit=" Mbps"
-                    width={60}
-                    domain={[0, (dataMax: number) => Math.max(dataMax * 1.2, 220)]}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    labelFormatter={(v) => formatTime(v as string)}
-                    formatter={(v, name) => [
-                      v != null ? `${(v as number).toFixed(1)} Mbps` : "—",
-                      name === "downloadMbps" ? "Download" : "Upload",
-                    ]}
-                  />
-                  <Legend
-                    formatter={(v) => (v === "downloadMbps" ? "Download" : "Upload")}
-                    wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }}
-                  />
-                  <ReferenceLine
-                    y={200}
-                    stroke="#444"
-                    strokeDasharray="4 4"
-                    label={{ value: "200", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
-                  />
-                  <ReferenceLine
-                    y={150}
-                    stroke="#444"
-                    strokeDasharray="4 4"
-                    label={{ value: "150", fill: "#555", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="downloadMbps"
-                    stroke="#f5a623"
-                    fill="rgba(245,166,35,0.15)"
-                    strokeWidth={1.5}
-                    dot={false}
-                    connectNulls={false}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="uploadMbps"
-                    stroke="#888"
-                    fill="rgba(136,136,136,0.1)"
-                    strokeWidth={1.5}
-                    dot={false}
-                    connectNulls={false}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
+                  <YAxis unit=" Mbps" width={64} domain={[0, (m: number) => Math.max(m * 1.2, 220)]} {...AXIS} />
+                  <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
+                    formatter={(v, name) => [v != null ? `${(v as number).toFixed(1)} Mbps` : "—", name === "downloadMbps" ? "Download" : "Upload"]} />
+                  <Legend formatter={(v) => v === "downloadMbps" ? "Download" : "Upload"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
+                  {/* acceptable band 150–200 Mbps */}
+                  <ReferenceArea y1={150} y2={200} fill="rgba(76,175,80,0.08)" strokeOpacity={0} />
+                  <ReferenceLine y={150} stroke="#2d4a2d" strokeDasharray="3 3" />
+                  <ReferenceLine y={200} stroke="#2d4a2d" strokeDasharray="3 3" />
+                  <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} connectNulls={false} />
+                  <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} connectNulls={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </section>
 
-          <section style={styles.statsRow}>
-            <StatCard
-              label="Uptime"
-              value={stats.uptime !== null ? `${stats.uptime.toFixed(2)}%` : "—"}
-            />
-            <StatCard
-              label="Avg Router Latency"
-              value={stats.avgRouter !== null ? `${stats.avgRouter.toFixed(1)} ms` : "—"}
-            />
-            <StatCard
-              label="Avg External Latency"
-              value={stats.avgExternal !== null ? `${stats.avgExternal.toFixed(1)} ms` : "—"}
-            />
-            <StatCard
-              label="Dropout Events"
-              value={String(stats.dropouts)}
-              highlight={stats.dropouts > 0}
-            />
+          {/* Stats row */}
+          <section className="grid grid-cols-4 gap-px bg-edge border border-edge mt-2">
+            <StatCard label="Uptime"               value={stats.uptime     !== null ? `${stats.uptime.toFixed(2)}%`    : "—"} />
+            <StatCard label="Avg Router Latency"   value={stats.avgRouter  !== null ? `${stats.avgRouter.toFixed(1)} ms` : "—"} />
+            <StatCard label="Avg External Latency" value={stats.avgExternal !== null ? `${stats.avgExternal.toFixed(1)} ms` : "—"} />
+            <StatCard label="Dropout Events"       value={String(stats.dropouts)} highlight={stats.dropouts > 0} />
           </section>
         </>
       )}
@@ -427,127 +259,13 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
+function StatCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div style={styles.statCard}>
-      <div style={styles.statLabel}>{label}</div>
-      <div
-        style={{
-          ...styles.statValue,
-          color: highlight ? "var(--red)" : "var(--amber)",
-        }}
-      >
+    <div className="bg-surface px-4 py-3.5">
+      <div className="text-[10px] text-muted uppercase tracking-widest mb-1.5">{label}</div>
+      <div className={`text-[22px] font-bold tracking-wide ${highlight ? "text-danger" : "text-accent"}`}>
         {value}
       </div>
     </div>
   );
 }
-
-const tooltipStyle: React.CSSProperties = {
-  background: "#1a1a1a",
-  border: "1px solid #333",
-  borderRadius: 0,
-  fontFamily: "monospace",
-  fontSize: 12,
-  color: "#e8e8e8",
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    maxWidth: 1100,
-    margin: "0 auto",
-    padding: "24px 20px",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    borderBottom: "1px solid var(--border)",
-    paddingBottom: 12,
-  },
-  title: {
-    color: "var(--amber)",
-    fontSize: 16,
-    letterSpacing: "0.1em",
-  },
-  rangeBar: {
-    display: "flex",
-    gap: 4,
-  },
-  rangeBtn: {
-    background: "transparent",
-    border: "1px solid var(--border)",
-    color: "var(--dim)",
-    padding: "4px 10px",
-    cursor: "pointer",
-    fontFamily: "monospace",
-    fontSize: 12,
-    letterSpacing: "0.05em",
-  },
-  rangeBtnActive: {
-    border: "1px solid var(--amber)",
-    color: "var(--amber)",
-  },
-  statusBanner: {
-    border: "1px solid",
-    padding: "10px 16px",
-    marginBottom: 20,
-    fontSize: 13,
-    letterSpacing: "0.04em",
-  },
-  statusTime: {
-    color: "var(--dim)",
-    fontSize: 12,
-  },
-  info: {
-    color: "var(--dim)",
-    padding: "20px 0",
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    color: "var(--dim)",
-    marginBottom: 8,
-    letterSpacing: "0.12em",
-  },
-  chartWrap: {
-    border: "1px solid var(--border)",
-    padding: "12px 4px 4px",
-  },
-  statsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 1,
-    background: "var(--border)",
-    border: "1px solid var(--border)",
-    marginTop: 8,
-  },
-  statCard: {
-    background: "var(--surface)",
-    padding: "14px 16px",
-  },
-  statLabel: {
-    fontSize: 10,
-    color: "var(--dim)",
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    marginBottom: 6,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "var(--amber)",
-    letterSpacing: "0.02em",
-  },
-};
