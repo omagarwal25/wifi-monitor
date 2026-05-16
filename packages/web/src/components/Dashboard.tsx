@@ -239,8 +239,8 @@ export default function Dashboard() {
                   <ReferenceArea y1={150} y2={200} fill="rgba(76,175,80,0.08)" strokeOpacity={0} />
                   <ReferenceLine y={150} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
                   <ReferenceLine y={200} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
-                  <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} connectNulls={false} />
-                  <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} connectNulls={false} />
+                  <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={{ r: 3, fill: "#f5a623", strokeWidth: 0 }} connectNulls={true} />
+                  <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={{ r: 3, fill: "#666",    strokeWidth: 0 }} connectNulls={true} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
