@@ -52,8 +52,8 @@ metricsRouter.get("/", async (c) => {
   const limitParam = c.req.query("limit");
   const limit = limitParam ? Math.min(parseInt(limitParam, 10), 10000) : 720;
 
-  const metrics = await prisma.metric.findMany({
-    orderBy: { measuredAt: "asc" },
+  const metrics = (await prisma.metric.findMany({
+    orderBy: { measuredAt: "desc" },
     take: limit,
     select: {
       id: true,
@@ -68,7 +68,7 @@ metricsRouter.get("/", async (c) => {
       downloadMbps: true,
       uploadMbps: true,
     },
-  });
+  })).reverse();
 
   return c.json(metrics);
 });
