@@ -142,14 +142,36 @@ export default function Dashboard() {
     windowStart && windowEnd && e.occurredAt >= windowStart && e.occurredAt <= windowEnd
   );
 
-  const chartData = metrics.map((m) => ({
+  const isDotMode = rangeIdx === 0;
+  const smoothWindow = [0, 5, 10, 15][rangeIdx];
+
+  function smooth(arr: (number | null)[]): (number | null)[] {
+    if (!smoothWindow) return arr;
+    const half = Math.floor(smoothWindow / 2);
+    return arr.map((_, i) => {
+      const slice = arr.slice(Math.max(0, i - half), Math.min(arr.length, i + half + 1));
+      const valid = slice.filter((v): v is number => v !== null);
+      return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+    });
+  }
+
+  const smoothed = {
+    routerLatencyMs:    smooth(metrics.map((m) => m.routerLatencyMs)),
+    externalLatencyMs:  smooth(metrics.map((m) => m.externalLatencyMs)),
+    routerPacketLoss:   smooth(metrics.map((m) => m.routerPacketLoss)),
+    externalPacketLoss: smooth(metrics.map((m) => m.externalPacketLoss)),
+    downloadMbps:       smooth(metrics.map((m) => m.downloadMbps)),
+    uploadMbps:         smooth(metrics.map((m) => m.uploadMbps)),
+  };
+
+  const chartData = metrics.map((m, i) => ({
     time: m.measuredAt,
-    routerLatencyMs: m.routerLatencyMs,
-    externalLatencyMs: m.externalLatencyMs,
-    routerPacketLoss: m.routerPacketLoss,
-    externalPacketLoss: m.externalPacketLoss,
-    downloadMbps: m.downloadMbps,
-    uploadMbps: m.uploadMbps,
+    routerLatencyMs:    smoothed.routerLatencyMs[i],
+    externalLatencyMs:  smoothed.externalLatencyMs[i],
+    routerPacketLoss:   smoothed.routerPacketLoss[i],
+    externalPacketLoss: smoothed.externalPacketLoss[i],
+    downloadMbps:       smoothed.downloadMbps[i],
+    uploadMbps:         smoothed.uploadMbps[i],
   }));
 
   return (
@@ -212,8 +234,8 @@ export default function Dashboard() {
                   {allDropouts.map((r, i) => <ReferenceArea key={i} x1={r.x1} x2={r.x2} fill={r.fill} strokeOpacity={0} />)}
                   <ReferenceLine y={50} stroke="rgba(245,166,35,0.4)" strokeDasharray="4 4"
                     label={{ value: "50ms", fill: "#f5a623", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
-                  <Line type="monotone" dataKey="routerLatencyMs"    stroke="#f5a623" dot={false} strokeWidth={1.5} connectNulls={false} />
-                  <Line type="monotone" dataKey="externalLatencyMs"  stroke="#666"    dot={false} strokeWidth={1.5} connectNulls={false} />
+                  <Line type="monotone" dataKey="routerLatencyMs"   stroke="#f5a623" strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#f5a623", strokeWidth: 0 } : false} connectNulls={false} />
+                  <Line type="monotone" dataKey="externalLatencyMs" stroke="#666"    strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#666",    strokeWidth: 0 } : false} connectNulls={false} />
                   {visibleEvents.map((e) => (
                     <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4"
                       label={{ value: e.label, fill: "#6aa0ff", fontSize: 10, fontFamily: "monospace", position: "insideTopLeft", angle: -90, dy: 4 }} />
@@ -237,8 +259,8 @@ export default function Dashboard() {
                   <Legend formatter={(v) => v === "routerPacketLoss" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
                   <ReferenceLine y={1} stroke="rgba(245,166,35,0.4)" strokeDasharray="4 4"
                     label={{ value: "1%", fill: "#f5a623", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
-                  <Area type="monotone" dataKey="routerPacketLoss"   stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} />
-                  <Area type="monotone" dataKey="externalPacketLoss" stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} />
+                  <Area type="monotone" dataKey="routerPacketLoss"   stroke="#f5a623" fill={isDotMode ? "none" : "rgba(245,166,35,0.12)"}  strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#f5a623", strokeWidth: 0 } : false} />
+                  <Area type="monotone" dataKey="externalPacketLoss" stroke="#666"    fill={isDotMode ? "none" : "rgba(100,100,100,0.08)"} strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#666",    strokeWidth: 0 } : false} />
                   {visibleEvents.map((e) => (
                     <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4" />
                   ))}
@@ -263,8 +285,8 @@ export default function Dashboard() {
                   <ReferenceArea y1={150} y2={200} fill="rgba(76,175,80,0.08)" strokeOpacity={0} />
                   <ReferenceLine y={150} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
                   <ReferenceLine y={200} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
-                  <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={{ r: 3, fill: "#f5a623", strokeWidth: 0 }} connectNulls={true} />
-                  <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={{ r: 3, fill: "#666",    strokeWidth: 0 }} connectNulls={true} />
+                  <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill={isDotMode ? "none" : "rgba(245,166,35,0.12)"}  strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: "#f5a623", strokeWidth: 0 }} connectNulls={true} />
+                  <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill={isDotMode ? "none" : "rgba(100,100,100,0.08)"} strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: "#666",    strokeWidth: 0 }} connectNulls={true} />
                   {visibleEvents.map((e) => (
                     <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4" />
                   ))}
