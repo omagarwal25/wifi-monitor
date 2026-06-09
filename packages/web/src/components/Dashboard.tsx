@@ -28,6 +28,12 @@ interface Metric {
   uploadMbps: number | null;
 }
 
+interface PiEvent {
+  id: number;
+  occurredAt: string;
+  label: string;
+}
+
 const TIME_RANGES = [
   { label: "1h", limit: 60 },
   { label: "6h", limit: 360 },
@@ -83,6 +89,7 @@ function computeStats(metrics: Metric[]) {
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [events, setEvents] = useState<PiEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rangeIdx, setRangeIdx] = useState(2);
@@ -91,9 +98,13 @@ export default function Dashboard() {
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/metrics?limit=${limit}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setMetrics(await res.json());
+      const [metricsRes, eventsRes] = await Promise.all([
+        fetch(`${API_URL}/metrics?limit=${limit}`),
+        fetch(`${API_URL}/events`),
+      ]);
+      if (!metricsRes.ok) throw new Error(`HTTP ${metricsRes.status}`);
+      setMetrics(await metricsRes.json());
+      if (eventsRes.ok) setEvents(await eventsRes.json());
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Fetch failed");
@@ -124,6 +135,12 @@ export default function Dashboard() {
     ...computeDropoutRegions(metrics, "routerReachable").map((r) => ({ ...r, fill: "rgba(232,64,64,0.15)" })),
     ...computeDropoutRegions(metrics, "externalReachable").map((r) => ({ ...r, fill: "rgba(245,200,66,0.1)" })),
   ];
+
+  const windowStart = metrics.length ? metrics[0].measuredAt : null;
+  const windowEnd   = metrics.length ? metrics[metrics.length - 1].measuredAt : null;
+  const visibleEvents = events.filter((e) =>
+    windowStart && windowEnd && e.occurredAt >= windowStart && e.occurredAt <= windowEnd
+  );
 
   const chartData = metrics.map((m) => ({
     time: m.measuredAt,
@@ -197,6 +214,10 @@ export default function Dashboard() {
                     label={{ value: "50ms", fill: "#f5a623", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
                   <Line type="monotone" dataKey="routerLatencyMs"    stroke="#f5a623" dot={false} strokeWidth={1.5} connectNulls={false} />
                   <Line type="monotone" dataKey="externalLatencyMs"  stroke="#666"    dot={false} strokeWidth={1.5} connectNulls={false} />
+                  {visibleEvents.map((e) => (
+                    <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4"
+                      label={{ value: e.label, fill: "#6aa0ff", fontSize: 10, fontFamily: "monospace", position: "insideTopLeft", angle: -90, dy: 4 }} />
+                  ))}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -218,6 +239,9 @@ export default function Dashboard() {
                     label={{ value: "1%", fill: "#f5a623", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
                   <Area type="monotone" dataKey="routerPacketLoss"   stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={false} />
                   <Area type="monotone" dataKey="externalPacketLoss" stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={false} />
+                  {visibleEvents.map((e) => (
+                    <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4" />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -241,6 +265,9 @@ export default function Dashboard() {
                   <ReferenceLine y={200} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
                   <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill="rgba(245,166,35,0.12)"  strokeWidth={1.5} dot={{ r: 3, fill: "#f5a623", strokeWidth: 0 }} connectNulls={true} />
                   <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill="rgba(100,100,100,0.08)" strokeWidth={1.5} dot={{ r: 3, fill: "#666",    strokeWidth: 0 }} connectNulls={true} />
+                  {visibleEvents.map((e) => (
+                    <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4" />
+                  ))}
                 </AreaChart>
               </ResponsiveContainer>
             </div>

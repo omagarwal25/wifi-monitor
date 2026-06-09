@@ -22,3 +22,11 @@ model Metric {
 
   @@index([measuredAt])
 }
+
+model PiEvent {
+  id         Int      @id @default(autoincrement())
+  occurredAt DateTime
+  label      String
+
+  @@index([occurredAt])
+}

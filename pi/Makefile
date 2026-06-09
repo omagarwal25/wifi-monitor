@@ -1,4 +1,7 @@
-.PHONY: install cron update logs errors status speedtest clean
+include .env
+export
+
+.PHONY: install cron update logs errors status speedtest event clean
 
 install:
 	sudo apt update && sudo apt install -y python3-pip git sqlite3
@@ -31,6 +34,14 @@ status:
 
 speedtest:
 	FORCE_SPEEDTEST=1 /usr/bin/python3 $(PWD)/monitor.py
+
+event:
+	@test -n "$(LABEL)" || (echo "Usage: make event LABEL='Location change'"; exit 1)
+	curl -s -X POST $(API_URL)/events \
+		-H "Authorization: Bearer $(API_KEY)" \
+		-H "Content-Type: application/json" \
+		-d "{\"occurredAt\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"label\": \"$(LABEL)\"}" \
+		&& echo "" && echo "Event recorded."
 
 clean:
 	rm -f metrics.db cron.log errors.log
