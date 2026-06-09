@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import {
   ComposedChart,
   Line,
-  Bar,
   ReferenceArea,
   ReferenceLine,
   Area,
@@ -157,7 +156,7 @@ export default function Dashboard() {
     windowStart && windowEnd && e.occurredAt >= windowStart && e.occurredAt <= windowEnd
   );
 
-  const isStemMode = rangeIdx === 0;
+  const isDotMode = rangeIdx === 0;
   const smoothWindow = [0, 5, 10, 15][rangeIdx];
 
   function smooth(arr: (number | null)[]): (number | null)[] {
@@ -249,13 +248,8 @@ export default function Dashboard() {
                   {allDropouts.map((r, i) => <ReferenceArea key={i} x1={r.x1} x2={r.x2} fill={r.fill} strokeOpacity={0} />)}
                   <ReferenceLine y={50} stroke={C.routerRef} strokeDasharray="4 4"
                     label={{ value: "50ms", fill: C.router, fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
-                  {isStemMode ? <>
-                    <Bar dataKey="routerLatencyMs"   barSize={1} fill={C.router}    />
-                    <Bar dataKey="externalLatencyMs" barSize={1} fill={C.secondary} />
-                  </> : <>
-                    <Line type="monotone" dataKey="routerLatencyMs"   stroke={C.router}    strokeWidth={1.5} dot={false} connectNulls={false} />
-                    <Line type="monotone" dataKey="externalLatencyMs" stroke={C.secondary} strokeWidth={1.5} dot={false} connectNulls={false} />
-                  </>}
+                  <Line type="monotone" dataKey="routerLatencyMs"   stroke={C.router}    strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.router,    strokeWidth: 0 } : false} connectNulls={false} />
+                  <Line type="monotone" dataKey="externalLatencyMs" stroke={C.secondary} strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.secondary, strokeWidth: 0 } : false} connectNulls={false} />
                   {visibleEvents.map((e) => (
                     <ReferenceLine key={e.id} x={e.occurredAt} stroke={C.event} strokeDasharray="4 4"
                       label={{ value: e.label, fill: C.eventLabel, fontSize: 10, fontFamily: "monospace", position: "insideTopLeft", angle: -90, dy: 4 }} />
@@ -279,13 +273,8 @@ export default function Dashboard() {
                   <Legend formatter={(v) => v === "routerPacketLoss" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
                   <ReferenceLine y={1} stroke={C.routerRef} strokeDasharray="4 4"
                     label={{ value: "1%", fill: C.router, fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
-                  {isStemMode ? <>
-                    <Bar dataKey="routerPacketLoss"   barSize={1} fill={C.router}    />
-                    <Bar dataKey="externalPacketLoss" barSize={1} fill={C.secondary} />
-                  </> : <>
-                    <Area type="monotone" dataKey="routerPacketLoss"   stroke={C.router}    fill={C.routerFill}    strokeWidth={1.5} dot={false} />
-                    <Area type="monotone" dataKey="externalPacketLoss" stroke={C.secondary} fill={C.secondaryFill} strokeWidth={1.5} dot={false} />
-                  </>}
+                  <Area type="monotone" dataKey="routerPacketLoss"   stroke={C.router}    fill={isDotMode ? "none" : C.routerFill}    strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.router,    strokeWidth: 0 } : false} />
+                  <Area type="monotone" dataKey="externalPacketLoss" stroke={C.secondary} fill={isDotMode ? "none" : C.secondaryFill} strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.secondary, strokeWidth: 0 } : false} />
                   {visibleEvents.map((e) => (
                     <ReferenceLine key={e.id} x={e.occurredAt} stroke={C.event} strokeDasharray="4 4" />
                   ))}
@@ -309,13 +298,8 @@ export default function Dashboard() {
                   <ReferenceArea y1={150} y2={200} fill={C.speedBand} strokeOpacity={0} />
                   <ReferenceLine y={150} stroke={C.speedRef} strokeDasharray="3 3" />
                   <ReferenceLine y={200} stroke={C.speedRef} strokeDasharray="3 3" />
-                  {isStemMode ? <>
-                    <Bar dataKey="downloadMbps" barSize={1} fill={C.router}    />
-                    <Bar dataKey="uploadMbps"   barSize={1} fill={C.secondary} />
-                  </> : <>
-                    <Area type="monotone" dataKey="downloadMbps" stroke={C.router}    fill={C.routerFill}    strokeWidth={1.5} dot={{ r: 3, fill: C.router,    strokeWidth: 0 }} connectNulls={true} />
-                    <Area type="monotone" dataKey="uploadMbps"   stroke={C.secondary} fill={C.secondaryFill} strokeWidth={1.5} dot={{ r: 3, fill: C.secondary, strokeWidth: 0 }} connectNulls={true} />
-                  </>}
+                  <Area type="monotone" dataKey="downloadMbps" stroke={C.router}    fill={isDotMode ? "none" : C.routerFill}    strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: C.router,    strokeWidth: 0 }} connectNulls={true} />
+                  <Area type="monotone" dataKey="uploadMbps"   stroke={C.secondary} fill={isDotMode ? "none" : C.secondaryFill} strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: C.secondary, strokeWidth: 0 }} connectNulls={true} />
                   {visibleEvents.map((e) => (
                     <ReferenceLine key={e.id} x={e.occurredAt} stroke={C.event} strokeDasharray="4 4" />
                   ))}
