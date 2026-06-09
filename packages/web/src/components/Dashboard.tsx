@@ -164,8 +164,9 @@ export default function Dashboard() {
     const half = Math.floor(smoothWindow / 2);
     return arr.map((_, i) => {
       const slice = arr.slice(Math.max(0, i - half), Math.min(arr.length, i + half + 1));
-      const valid = slice.filter((v): v is number => v !== null);
-      return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+      const valid = slice.filter((v): v is number => v !== null).sort((a, b) => a - b);
+      const mid = Math.floor(valid.length / 2);
+      return valid.length ? (valid.length % 2 ? valid[mid] : (valid[mid - 1] + valid[mid]) / 2) : null;
     });
   }
 
