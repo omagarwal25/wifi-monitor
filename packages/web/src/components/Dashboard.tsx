@@ -43,6 +43,21 @@ const TIME_RANGES = [
 
 const API_URL = import.meta.env.VITE_API_URL ?? "";
 
+const C = {
+  router:          "#f5a623",
+  routerFill:      "rgba(245,166,35,0.12)",
+  routerRef:       "rgba(245,166,35,0.4)",
+  secondary:       "#666",
+  secondaryFill:   "rgba(100,100,100,0.08)",
+  outageRouter:    "rgba(232,64,64,0.15)",
+  outageExternal:  "rgba(245,200,66,0.1)",
+  speedBand:       "rgba(76,175,80,0.08)",
+  speedRef:        "rgba(76,175,80,0.5)",
+  event:           "rgba(100,160,255,0.6)",
+  eventLabel:      "#6aa0ff",
+  grid:            "#1e1e1e",
+};
+
 const AXIS = { stroke: "#444", tick: { fill: "#555", fontSize: 11, fontFamily: "monospace" } };
 const TOOLTIP: React.CSSProperties = {
   background: "#1a1a1a",
@@ -132,8 +147,8 @@ export default function Dashboard() {
   const stats = computeStats(metrics);
 
   const allDropouts = [
-    ...computeDropoutRegions(metrics, "routerReachable").map((r) => ({ ...r, fill: "rgba(232,64,64,0.15)" })),
-    ...computeDropoutRegions(metrics, "externalReachable").map((r) => ({ ...r, fill: "rgba(245,200,66,0.1)" })),
+    ...computeDropoutRegions(metrics, "routerReachable").map((r) => ({ ...r, fill: C.outageRouter })),
+    ...computeDropoutRegions(metrics, "externalReachable").map((r) => ({ ...r, fill: C.outageExternal })),
   ];
 
   const windowStart = metrics.length ? metrics[0].measuredAt : null;
@@ -225,20 +240,20 @@ export default function Dashboard() {
             <div className="border border-edge p-3 pr-1 pb-1">
               <ResponsiveContainer width="100%" height={220}>
                 <ComposedChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.grid} />
                   <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
                   <YAxis unit=" ms" width={52} domain={[0, (m: number) => Math.max(m * 1.2, 60)]} {...AXIS} />
                   <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
                     formatter={(v, name) => [v != null ? `${(v as number).toFixed(1)} ms` : "—", name === "routerLatencyMs" ? "Router" : "External"]} />
                   <Legend formatter={(v) => v === "routerLatencyMs" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
                   {allDropouts.map((r, i) => <ReferenceArea key={i} x1={r.x1} x2={r.x2} fill={r.fill} strokeOpacity={0} />)}
-                  <ReferenceLine y={50} stroke="rgba(245,166,35,0.4)" strokeDasharray="4 4"
-                    label={{ value: "50ms", fill: "#f5a623", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
-                  <Line type="monotone" dataKey="routerLatencyMs"   stroke="#f5a623" strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#f5a623", strokeWidth: 0 } : false} connectNulls={false} />
-                  <Line type="monotone" dataKey="externalLatencyMs" stroke="#666"    strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#666",    strokeWidth: 0 } : false} connectNulls={false} />
+                  <ReferenceLine y={50} stroke={C.routerRef} strokeDasharray="4 4"
+                    label={{ value: "50ms", fill: C.router, fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
+                  <Line type="monotone" dataKey="routerLatencyMs"   stroke={C.router}    strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.router,    strokeWidth: 0 } : false} connectNulls={false} />
+                  <Line type="monotone" dataKey="externalLatencyMs" stroke={C.secondary} strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.secondary, strokeWidth: 0 } : false} connectNulls={false} />
                   {visibleEvents.map((e) => (
-                    <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4"
-                      label={{ value: e.label, fill: "#6aa0ff", fontSize: 10, fontFamily: "monospace", position: "insideTopLeft", angle: -90, dy: 4 }} />
+                    <ReferenceLine key={e.id} x={e.occurredAt} stroke={C.event} strokeDasharray="4 4"
+                      label={{ value: e.label, fill: C.eventLabel, fontSize: 10, fontFamily: "monospace", position: "insideTopLeft", angle: -90, dy: 4 }} />
                   ))}
                 </ComposedChart>
               </ResponsiveContainer>
@@ -251,18 +266,18 @@ export default function Dashboard() {
             <div className="border border-edge p-3 pr-1 pb-1">
               <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.grid} />
                   <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
                   <YAxis domain={[0, (max: number) => max < 2 ? 5 : Math.ceil(max * 1.4)]} unit="%" width={40} {...AXIS} />
                   <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
                     formatter={(v, name) => [`${(v as number).toFixed(1)}%`, name === "routerPacketLoss" ? "Router" : "External"]} />
                   <Legend formatter={(v) => v === "routerPacketLoss" ? "Router" : "External"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
-                  <ReferenceLine y={1} stroke="rgba(245,166,35,0.4)" strokeDasharray="4 4"
-                    label={{ value: "1%", fill: "#f5a623", fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
-                  <Area type="monotone" dataKey="routerPacketLoss"   stroke="#f5a623" fill={isDotMode ? "none" : "rgba(245,166,35,0.12)"}  strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#f5a623", strokeWidth: 0 } : false} />
-                  <Area type="monotone" dataKey="externalPacketLoss" stroke="#666"    fill={isDotMode ? "none" : "rgba(100,100,100,0.08)"} strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: "#666",    strokeWidth: 0 } : false} />
+                  <ReferenceLine y={1} stroke={C.routerRef} strokeDasharray="4 4"
+                    label={{ value: "1%", fill: C.router, fontSize: 10, fontFamily: "monospace", position: "insideTopRight" }} />
+                  <Area type="monotone" dataKey="routerPacketLoss"   stroke={C.router}    fill={isDotMode ? "none" : C.routerFill}    strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.router,    strokeWidth: 0 } : false} />
+                  <Area type="monotone" dataKey="externalPacketLoss" stroke={C.secondary} fill={isDotMode ? "none" : C.secondaryFill} strokeWidth={isDotMode ? 0 : 1.5} dot={isDotMode ? { r: 2, fill: C.secondary, strokeWidth: 0 } : false} />
                   {visibleEvents.map((e) => (
-                    <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4" />
+                    <ReferenceLine key={e.id} x={e.occurredAt} stroke={C.event} strokeDasharray="4 4" />
                   ))}
                 </AreaChart>
               </ResponsiveContainer>
@@ -275,20 +290,19 @@ export default function Dashboard() {
             <div className="border border-edge p-3 pr-1 pb-1">
               <ResponsiveContainer width="100%" height={180}>
                 <AreaChart data={chartData} margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.grid} />
                   <XAxis dataKey="time" tickFormatter={formatTime} minTickGap={40} {...AXIS} />
                   <YAxis width={44} domain={[0, (m: number) => Math.max(m * 1.2, 220)]} {...AXIS} />
                   <Tooltip contentStyle={TOOLTIP} labelFormatter={(v) => formatTime(v as string)}
                     formatter={(v, name) => [v != null ? `${(v as number).toFixed(1)} Mbps` : "—", name === "downloadMbps" ? "Download" : "Upload"]} />
                   <Legend formatter={(v) => v === "downloadMbps" ? "Download" : "Upload"} wrapperStyle={{ fontSize: 11, fontFamily: "monospace" }} />
-                  {/* acceptable band 150–200 Mbps */}
-                  <ReferenceArea y1={150} y2={200} fill="rgba(76,175,80,0.08)" strokeOpacity={0} />
-                  <ReferenceLine y={150} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
-                  <ReferenceLine y={200} stroke="rgba(76,175,80,0.5)" strokeDasharray="3 3" />
-                  <Area type="monotone" dataKey="downloadMbps" stroke="#f5a623" fill={isDotMode ? "none" : "rgba(245,166,35,0.12)"}  strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: "#f5a623", strokeWidth: 0 }} connectNulls={true} />
-                  <Area type="monotone" dataKey="uploadMbps"   stroke="#666"    fill={isDotMode ? "none" : "rgba(100,100,100,0.08)"} strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: "#666",    strokeWidth: 0 }} connectNulls={true} />
+                  <ReferenceArea y1={150} y2={200} fill={C.speedBand} strokeOpacity={0} />
+                  <ReferenceLine y={150} stroke={C.speedRef} strokeDasharray="3 3" />
+                  <ReferenceLine y={200} stroke={C.speedRef} strokeDasharray="3 3" />
+                  <Area type="monotone" dataKey="downloadMbps" stroke={C.router}    fill={isDotMode ? "none" : C.routerFill}    strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: C.router,    strokeWidth: 0 }} connectNulls={true} />
+                  <Area type="monotone" dataKey="uploadMbps"   stroke={C.secondary} fill={isDotMode ? "none" : C.secondaryFill} strokeWidth={isDotMode ? 0 : 1.5} dot={{ r: 3, fill: C.secondary, strokeWidth: 0 }} connectNulls={true} />
                   {visibleEvents.map((e) => (
-                    <ReferenceLine key={e.id} x={e.occurredAt} stroke="rgba(100,160,255,0.6)" strokeDasharray="4 4" />
+                    <ReferenceLine key={e.id} x={e.occurredAt} stroke={C.event} strokeDasharray="4 4" />
                   ))}
                 </AreaChart>
               </ResponsiveContainer>
